@@ -54,7 +54,7 @@ module Rswag
         definitions[key]
       end
 
-      def add_verb(request, metadata) 
+      def add_verb(request, metadata)
         request[:verb] = metadata[:operation][:verb]
       end
 
@@ -66,10 +66,12 @@ module Rswag
             template.gsub!("{#{p[:name]}}", example.send(p[:name]).to_s)
           end
 
-          parameters.select { |p| p[:in] == :query }.each_with_index do |p, i|
-            template.concat(i == 0 ? '?' : '&')
-            template.concat(build_query_string_part(p, example.send(p[:name])))
-          end
+          query = parameters.select { |p| p[:in] == :query }.map do |p|
+            value = example.send(p[:name])
+            build_query_string_part(p, value) unless value.nil?
+          end.compact.join('&')
+          
+          template.concat('?' + query) unless query.empty?
         end
       end
 
@@ -104,7 +106,7 @@ module Rswag
         end
 
         # Content-Type header
-        consumes = metadata[:operation][:consumes] || swagger_doc[:consumes] 
+        consumes = metadata[:operation][:consumes] || swagger_doc[:consumes]
         if consumes
           content_type = example.respond_to?(:'Content-Type') ? example.send(:'Content-Type') : consumes.first
           tuples << [ 'Content-Type', content_type ]
